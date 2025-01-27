@@ -1,0 +1,36 @@
+# Define the registry hive, key, and value name
+$RegistryPath = "HKLM:\SOFTWARE\Dell\SupportAssistAgent"
+$ValueName = "Version"
+
+# Define the version to compare against
+$TargetVersion = [Version]"3.2.0.90"
+
+try {
+    # Check if the registry key exists
+    if (-not (Test-Path -Path $RegistryPath)) {
+        Write-Host "Registry key '$RegistryPath' does not exist."
+        exit 0
+    }
+
+    # Get the value of the registry entry
+    $Value = Get-ItemProperty -Path $RegistryPath -Name $ValueName -ErrorAction Stop
+
+    if ($Value -and $Value.$ValueName) {
+        $CurrentVersion = [Version]$Value.$ValueName
+        Write-Host "Current Version: $CurrentVersion"
+
+        if ($CurrentVersion -lt $TargetVersion) {
+            Write-Host "The current version ($CurrentVersion) is less than the target version ($TargetVersion)."
+            exit 1
+        } else {
+            Write-Host "The current version ($CurrentVersion) is equal to or greater than the target version ($TargetVersion)."
+            exit 0
+        }
+    } else {
+        Write-Host "Registry key exists, but the value '$ValueName' does not exist or is empty."
+        exit 0
+    }
+} catch {
+    Write-Host "An error occurred while accessing the registry: $_"
+    exit 1
+}

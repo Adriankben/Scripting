@@ -1,0 +1,64 @@
+# Function to handle errors gracefully
+function Handle-Error {
+    param (
+        [string]$ErrorMessage
+    )
+    Write-Host "Error: $ErrorMessage" -ForegroundColor Red
+    # Log the error to a file for further analysis
+    Add-Content -Path "C:\WindowsUpdateErrorLog.txt" -Value "$(Get-Date) - $ErrorMessage"
+}
+
+# Ensure NuGet provider is installed and updated
+try {
+    Write-Host "Checking if NuGet provider is installed..." -ForegroundColor Cyan
+    $nuGetProvider = Get-PackageProvider -Name NuGet -ErrorAction SilentlyContinue
+
+    if (-not $nuGetProvider) {
+        Write-Host "NuGet provider is missing. Installing..." -ForegroundColor Cyan
+        Install-PackageProvider -Name NuGet -Force
+    } else {
+        Write-Host "NuGet provider is installed. Updating to the latest version..." -ForegroundColor Cyan
+        Install-PackageProvider -Name NuGet -Force
+    }
+} catch {
+    Handle-Error "Failed to install or update NuGet provider: $_"
+}
+
+# Ensure the Windows Update module is installed
+try {
+    Install-Module -Name PSWindowsUpdate -Force -Confirm:$false
+} catch {
+    Handle-Error "Failed to install PSWindowsUpdate module: $_"
+}
+
+# Import the PSWindowsUpdate module
+try {
+    Import-Module PSWindowsUpdate
+} catch {
+    Handle-Error "Failed to import PSWindowsUpdate module: $_"
+}
+
+# Scan for updates, filtering only feature updates
+Write-Host "Scanning for Windows feature updates..." -ForegroundColor Green
+try {
+    $updates = Get-WindowsUpdate -MicrosoftUpdate -AcceptAll | Where-Object {$_.Title -match 'Feature Update'}
+    
+    # Check if there are feature updates available
+    if ($updates -ne $null -and $updates.Count -gt 0) {
+        Write-Host "Feature updates found. Installing..." -ForegroundColor Green
+        $updates | ForEach-Object {
+            try {
+                Write-Host "Installing feature update: $($_.Title)" -ForegroundColor Yellow
+                Install-WindowsUpdate -KBArticleID $_.KBArticleIDs -AcceptAll -AutoReboot
+            } catch {
+                Handle-Error "Failed to install feature update: $($_.Title) - $_"
+            }
+        }
+    } else {
+        Write-Host "No feature updates found." -ForegroundColor Yellow
+    }
+} catch {
+    Handle-Error "Failed to scan for updates: $_"
+}
+
+Write-Host "Windows update check completed." -ForegroundColor Cyan

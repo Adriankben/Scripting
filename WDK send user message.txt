@@ -1,0 +1,5 @@
+$Title = "A patch is going to be installed soon"
+$Message = "We will be installing a patch soon!"
+$Dialog = "OK"
+
+Send-ActiveUserMessage -Title "TEST Notification" -Message "Please Reboot" -DialogType "$Dialog" -Timeout 60

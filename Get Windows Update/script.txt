@@ -1,0 +1,10 @@
+######Modify values to fit your needs######
+$systemEventIDs = 12,13,19,21,43,1074,1040,1033
+$daysOflogs = 1
+###########################################
+
+#Collect Events and write output to Activity Log
+$timeSpan = (Get-Date) - (New-TimeSpan -Day $daysOflogs)
+$systemEvents = Get-WinEvent -FilterHashtable @{logname = 'System','Application'} | Where-Object {$_.id -iin $systemEventIDs -and ( $_.TimeCreated -ge $timeSpan )} | Format-Table TimeCreated,id,message -Wrap
+Write-Output $systemEvents
+Exit 0

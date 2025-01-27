@@ -1,0 +1,20 @@
+# Define the common installation paths
+$Paths = @(
+    "C:\Program Files (x86)\Cisco\Cisco AnyConnect Secure Mobility Client\vpndownloader.exe",
+    "C:\Program Files (x86)\Cisco\Cisco Secure Client\UI\csc_ui.exe"
+)
+
+# Check if any of the paths exist
+$CiscoVPNFound = $false
+foreach ($Path in $Paths) {
+    if (Test-Path $Path) {
+        Write-Output "Cisco VPN is installed. Executable found at: $Path"
+        $CiscoVPNFound = $true
+        Exit 1
+    }
+}
+
+if (-not $CiscoVPNFound) {
+    Write-Output "Cisco VPN is not installed."
+    Exit 0
+}

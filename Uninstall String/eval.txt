@@ -1,0 +1,11 @@
+if (Test-Path -Path "C:\Program Files\Guardicore\Uninstall.exe") {
+    [System.Environment]::ExitCode = 1  # Found older version
+
+} else {
+    [System.Environment]::ExitCode = 0  # Not found
+}
+
+
+
+
+

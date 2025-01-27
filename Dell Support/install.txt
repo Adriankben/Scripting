@@ -1,0 +1,17 @@
+# URL to download Dell Command installer 
+$dellUrl = "dellCommand.exe"
+$outputPath = Join-Path -Path $env:TEMP -ChildPath "jdk-21_windows-x64_bin.msi"
+
+if (-Not (Test-Path $outputPath)) {
+    Write-Host "Downloading Java 21 installer..." -ForegroundColor Yellow
+    Invoke-WebRequest -Uri $javaUrl -OutFile $outputPath
+    Write-Host "Download completed." -ForegroundColor Green
+}
+
+if (Test-Path $outputPath) {
+    Write-Host "Running Java 21 installer..." -ForegroundColor Yellow
+    Start-Process -FilePath "msiexec.exe" -ArgumentList "/i `"$outputPath`" /quiet /norestart" -Wait
+    Write-Host "Java 21 installation completed." -ForegroundColor Green
+} else {
+    Write-Host "Java 21 installer not found at $outputPath." -ForegroundColor Red
+}
