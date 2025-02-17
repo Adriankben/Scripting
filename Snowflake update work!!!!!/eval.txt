@@ -1,0 +1,20 @@
+# Define the common installation paths
+$Paths = @(
+    "",
+    "C:\Program Files\Snowflake ODBC Driver"
+)
+
+# Check if any of the paths exist
+$SnowflakeFound = $false
+foreach ($Path in $Paths) {
+    if (Test-Path $Path) {
+        Write-Output "Snowflake ODBC Driver is installed. Executable found at: $Path"
+        $SnowflakeFound = $true
+        Exit 1
+    }
+}
+
+if (-not $SnowflakeFound) {
+    Write-Output "Snowflake ODBC Driver is not installed."
+    Exit 0
+}
