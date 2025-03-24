@@ -1,0 +1,9 @@
+$users = @("abennett@domain.com", "kbennett@domain.com")
+
+foreach ($user in $users) {
+    $adUser = Get-ADUser -Filter {EmailAddress -eq $user} -Properties Enabled
+    if (!$adUser) {
+        Write-Host "$user not found in Active Directory."
+    } elseif ($adUser.Enabled -eq $false) {
+        Write-Host "$user is disabled in Active Directory."
+    }

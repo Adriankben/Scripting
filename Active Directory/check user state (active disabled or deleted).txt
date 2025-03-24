@@ -1,0 +1,8 @@
+foreach ($user in $users) {
+    $adUser = Get-ADUser -Filter {EmailAddress -eq $user} -Properties Enabled
+    if ($adUser) {
+        Write-Host "$user is found. Active: $($adUser.Enabled)"
+    } else {
+        Write-Host "$user not found in Active Directory."
+    }
+}
