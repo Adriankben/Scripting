@@ -1,0 +1,36 @@
+# Replace with the distinguished name (DN) of your OU
+$OU = "OU=Example LLC,DC=Company,DC=com"
+
+# Get all groups (including distribution groups) in the specified OU
+$Groups = Get-ADGroup -Filter * -SearchBase $OU -Properties mail
+
+# Prepare output array
+$Output = @()
+
+foreach ($Group in $Groups) {
+    $GroupEmail = $Group.mail
+    $GroupName = $Group.Name
+    $Members = Get-ADGroupMember -Identity $Group.DistinguishedName -Recursive | Where-Object { $_.objectClass -eq 'user' }
+
+    foreach ($Member in $Members) {
+        $Output += [PSCustomObject]@{
+            GroupName  = $GroupName
+            GroupEmail = $GroupEmail
+            MemberName = $Member.SamAccountName
+        }
+    }
+
+    # If no members, add entry with empty member
+    if (-not $Members) {
+        $Output += [PSCustomObject]@{
+            GroupName  = $GroupName
+            GroupEmail = $GroupEmail
+            MemberName = "(No Members)"
+        }
+    }
+}
+
+# Export to CSV
+$Output | Export-Csv -Path "C:\AD_Group_Members_With_Emails.csv" -NoTypeInformation
+
+Write-Output "Report saved to C:\AD_Group_Members_With_Emails.csv"
