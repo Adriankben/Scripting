@@ -1,0 +1,73 @@
+# Ensure Active Directory module is available
+Import-Module ActiveDirectory
+
+# Prompt for display name
+$displayName = Read-Host "Enter the display name of the user"
+
+# Search for users by display name and ensure result is treated as an array
+$matchedUsers = @(Get-ADUser -Filter "DisplayName -like '*$displayName*'" -Properties DisplayName, EmailAddress)
+
+if ($matchedUsers.Count -eq 0) {
+    Write-Host "No users found matching '$displayName'" -ForegroundColor Red
+    exit
+}
+
+# Display results with index
+Write-Host "Matching users:"
+$index = 0
+$matchedUsers | ForEach-Object {
+    Write-Host "[$index] Display Name: $($_.DisplayName), Email: $($_.EmailAddress)"
+    $index++
+}
+
+# Select user by index
+$userIndex = Read-Host "Enter the number of the user you want to select"
+
+# Validate input
+if (-not [int]::TryParse($userIndex, [ref]$null) -or $userIndex -lt 0 -or $userIndex -ge $matchedUsers.Count) {
+    Write-Host "Invalid selection." -ForegroundColor Red
+    exit
+}
+
+$selectedUser = $matchedUsers[$userIndex]
+Write-Host "Selected User: $($selectedUser.DisplayName) <$($selectedUser.EmailAddress)>"
+
+# Get group memberships
+$groups = Get-ADUser $selectedUser.SamAccountName -Properties MemberOf | Select-Object -ExpandProperty MemberOf
+
+if (!$groups) {
+    Write-Host "User is not a member of any groups."
+} else {
+    # Filter out 'Domain Users'
+    $groupsToRemove = @()
+    foreach ($groupDN in $groups) {
+        $group = Get-ADGroup -Identity $groupDN
+        if ($group.Name -ne "Domain Users") {
+            $groupsToRemove += $group
+        }
+    }
+
+    # Confirm and remove from groups
+    if ($groupsToRemove.Count -eq 0) {
+        Write-Host "User is only a member of 'Domain Users'. No changes needed."
+    } else {
+        Write-Host "`nUser will be removed from the following groups:"
+        $groupsToRemove | ForEach-Object { Write-Host "- $($_.Name)" }
+
+        $confirm = Read-Host "`nProceed with removal? (Y/N)"
+        if ($confirm -match '^[Yy]$') {
+            foreach ($group in $groupsToRemove) {
+                Remove-ADGroupMember -Identity $group -Members $selectedUser -Confirm:$false
+            }
+            Write-Host "User removed from specified groups." -ForegroundColor Green
+        } else {
+            Write-Host "Operation cancelled."
+            exit
+        }
+    }
+}
+
+# Disable user and set description to "Term"
+Disable-ADAccount -Identity $selectedUser
+Set-ADUser -Identity $selectedUser -Description "Term"
+Write-Host "User account disabled and description set to 'Term'." -ForegroundColor Yellow
