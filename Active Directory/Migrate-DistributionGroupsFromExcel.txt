@@ -10,8 +10,8 @@ Remove-Item -Path $LogPath -ErrorAction SilentlyContinue
 $data = Import-Excel -Path $ExcelPath
 
 # Set OUs
-$TargetGroupOU = "OU=MIA-LG,OU=Distribution Groups,OU=GA Telesis LLC,DC=gatelesis,DC=com"
-$UserSearchBase = "OU=MIA-LG,OU=User Accounts,OU=GA Telesis LLC,DC=gatelesis,DC=com"
+$TargetGroupOU = "OU=NAMING-LG,OU=Distribution Groups,OU=Company,DC=company,DC=com"
+$UserSearchBase = "OU=NAMING-LG,OU=User Accounts,OU=Company,DC=company,DC=com"
 
 # Get unique group names
 $uniqueGroups = $data | Select-Object -ExpandProperty GroupName -Unique
