@@ -1,3 +1,3 @@
 # Scripting
 
-This is a collection of the some of useful scripts across various platforms.
+This is a collection of scripts I've found useful across various platforms.
