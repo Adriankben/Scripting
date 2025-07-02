@@ -1,0 +1,11 @@
+Get-Process						Get brief information about running process
+Get-Process 'lsass*'					Get brief information about a named process with wildcard
+Get-Process 'lsass' | Select-Object *			Detailed information
+Get-Process 'lsass' | Select-Object -First 1 *		Limits the output to the first object in the pipeline
+Get-Process -ComputerName FLL-HQ-DEFAULT		Remote systems
+
+
+Get-CimInstance
+Get-CimInstance -Class Win32_Process | Select-Object ProcessId, ProcessName, CommandLine
+
+Get-CimInstance -Class Win32_Process | Where-Object -Property ParentProcessId -EQ 644 
