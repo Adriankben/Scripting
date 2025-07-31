@@ -1,0 +1,7 @@
+Get-ScheduledTask
+Export-ScheduledTask
+Get-ScheduledTaskInfo
+
+Get-ScheduledTask *Program* | Select-Object -Property TaskName
+Export-ScheduledTask -TaskName 'ProgramUpdate'
+Get-ScheduledTaskInfo -TaskName 'ProgramUpdate'| Select-Object LastRunTime

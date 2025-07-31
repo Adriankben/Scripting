@@ -1,0 +1,9 @@
+$start = Get-Date 3/1/2025
+$end = Get-Date 3/31/2025
+Get-WinEvent -FilterHashtable @{LogName='Security'; StartTime=$start; EndTime=$end;}
+
+Get-WinEvent -LogName System | Where-Object -Property Id -EQ 7045 | Format-List -Property TimeCreated, Message
+Get-WinEvent -FilterHashtable @{LogName='System'; Id='7045'; StartTime=$start; EndTime=$end;}
+Where-Object -Property Id -EQ 7045 | Format-List -Property TimeCreated, Message
+
+Get-WinEvent -ListLog * | Select LogName, RecordCount
