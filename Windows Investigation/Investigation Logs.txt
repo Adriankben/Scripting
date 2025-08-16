@@ -1,9 +1,11 @@
-$start = Get-Date 3/1/2025
-$end = Get-Date 3/31/2025
-Get-WinEvent -FilterHashtable @{LogName='Security'; StartTime=$start; EndTime=$end;}
+Get-Service > baseline-services.txt
+Get-Service > services-liveinvestigation.txt
 
-Get-WinEvent -LogName System | Where-Object -Property Id -EQ 7045 | Format-List -Property TimeCreated, Message
-Get-WinEvent -FilterHashtable @{LogName='System'; Id='7045'; StartTime=$start; EndTime=$end;}
-Where-Object -Property Id -EQ 7045 | Format-List -Property TimeCreated, Message
+$baseline = Get-Content .\baseline-services.txt
+$current = Get-Content .\services-liveinvestigation.txt
 
-Get-WinEvent -ListLog * | Select LogName, RecordCount
+Compare-Object -ReferenceObject $baseline -DifferenceObject $current
+
+Use the side indicator arrow for change.
+Reference <=
+Difference =>

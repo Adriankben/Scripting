@@ -85,11 +85,18 @@ if ($groupsToRemove.Count -eq 0) {
     }
 }
 
-# Disable the user account and set description to "Term"
+# Disable the user account and set description to "Term" with today's date in MM/dd/yyyy format
 try {
+    # Get today's date in "MM/dd/yyyy" format
+    $dateToday = Get-Date -Format "MM/dd/yyyy"
+    
+    # Disable the user account
     Disable-ADAccount -Identity $selectedUser -ErrorAction Stop
-    Set-ADUser -Identity $selectedUser -Description "Term" -ErrorAction Stop
-    Write-Host "User account disabled and description set to 'Term'." -ForegroundColor Green
+    
+    # Set the user description to "Term" with the current date
+    Set-ADUser -Identity $selectedUser -Description "Term - $dateToday" -ErrorAction Stop
+    
+    Write-Host "User account disabled and description set to 'Term - $dateToday'." -ForegroundColor Green
 }
 catch {
     Write-Warning "Failed to disable user or set description: $_"
