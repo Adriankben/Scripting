@@ -1,0 +1,95 @@
+Email Header Analysis Guide
+
+Tools and Their Purpose
+
+Sublime Text + Email Header Package (13Cubed) – Format and highlight headers for easier reading.
+
+IANA Message Headers Registry – Official reference for header field definitions.
+
+DomainTools WHOIS (link) – Check domain registration, ownership, and creation dates.
+
+Microsoft Message Header Analyzer (MHA) – Analyze headers visually:
+Web tool: https://mha.azurewebsites.net/
+GitHub: https://github.com/microsoft/MHA
+
+MXToolbox – Header analysis, DNS lookups, blacklist checks, DKIM/SPF/DMARC validation
+
+DNSChecker – Verify DNS records across global servers.
+
+MalwareCube Email IOC Extractor – Parse IPs, domains, and IOCs from headers automatically.
+
+PhishTool - 
+
+Threat Intelligence Sources – VirusTotal, AbuseIPDB, Cisco Talos, GreyNoise for IP/domain reputation.
+
+
+Understanding Headers
+
+Each mail server that relays an email adds a "Received" header.
+
+The topmost entry is closest to the recipient (your mail server).
+
+Work backwards through the chain to identify the original sender.
+
+Compare the "X-Sender" or "X-Originating-IP" fields against the Received chain to detect spoofing.
+
+The most important entry is the one involving your MTA (Mail Transfer Agent), as this is the most reliable point.
+
+IP and Domain Checks
+
+Geolocation – Identify where the IP is physically located.
+
+ASN Lookup – Find the ISP or organization that owns the IP.
+
+Reverse DNS – Confirm if the IP resolves to the claimed hostname.
+
+Reputation Check – Determine if the IP or domain is blacklisted or known for abuse.
+
+WHOIS Lookup – Review domain registration history and creation dates to spot suspicious or newly registered domains.
+
+
+SPF (Sender Policy Framework)
+Check if the sending IP is authorized to send mail for the domain:
+
+nslookup -type=txt shodan.io | grep -i spf
+dig TXT shodan.io | grep -i spf 
+
+DKIM (DomainKeys Identified Mail)
+Extract the domain and selector from the DKIM-Signature header.
+
+Query DNS for the public key:
+nslookup -type=txt selector._domainkey.domain.com
+
+DMARC (Domain-based Message Authentication, Reporting & Conformance)
+Check if the sending domain enforces DMARC:
+
+dig TXT _dmarc.domain.com
+
+
+Extra Checks
+
+Compare the Return-Path with the From field.
+
+Validate that the Message-ID domain aligns with the sender’s domain.
+
+Watch for anomalies such as:
+Private IP addresses in the Received chain.
+Missing or invalid SPF, DKIM, DMARC records.
+Domains registered recently or with suspicious WHOIS details.
+Known malicious IPs or domains identified in reputation databases.
+
+Automation and Enrichment
+
+Use the MalwareCube Email IOC Extractor to quickly parse IPs, domains, and hashes.
+Cross-check findings with threat intelligence platforms such as VirusTotal, Talos, AbuseIPDB, or GreyNoise.
+Document results clearly for reporting and incident response.
+
+Key Takeaways
+
+Trace the routing path using Received headers.
+
+Validate sender identity with SPF, DKIM, and DMARC.
+
+Investigate IPs and domains with WHOIS, ASN, geolocation, and reputation checks.
+
+Use your MTA entry as the point of truth. Anything before that can be spoofed.
