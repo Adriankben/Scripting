@@ -1,5 +1,0 @@
-Get-Service
-Get-Service ServiceName
-
-Get-CimInstance -Class Win32_Service | Format-List Name,Caption,Description,PathName
-

@@ -1,8 +1,0 @@
-Get-LocalUser 
-
-Get-LocalUser | Where-Object { $_.Enabled -eq $True}
-Get-LocalUser | Where-Object 'Enabled' -eq $True
-
-Get-LocalGroup
-
-Get-LocalGroupMember Administrators

@@ -1,8 +1,0 @@
-Get-NetTCPConnection
-Get-NetTCPConnection -State Listen | Select-Object -Property LocalAddress, LocalPort, OwningProcess
-Get-NetTCPConnection -RemoteAddress 13.13.13.1 | Select Object CreationTime, LocalAddress, LocalPort, RemoteAddress, RemotePort, OwningProcess, State
-
-Once you get the process ID you can look up the process name using Get-Process -Id processed.
-Get-NetTCPConnection | Select-Object local*, remote*, state, @{Name='Process'; Expression={(Get-Process -Id$_.OwningProcess) .ProcessName}} | Format-Table
-
-
