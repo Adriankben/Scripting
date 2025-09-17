@@ -1,0 +1,61 @@
+..For Systems Using systemd (Most Modern Linux Distros)
+
+Edit the getty@.service file:
+sudo mkdir -p /etc/systemd/system/getty@tty1.service.d
+sudo nano /etc/systemd/system/getty@tty1.service.d/override.conf
+
+Add the following lines:
+[Service]
+ExecStart=
+ExecStart=-/sbin/agetty --autologin your_username --noclear %I $TERM
+
+(Replace your_username with your actual username.)
+Save and exit (Ctrl + X, then Y, then Enter).
+
+Reload systemd and restart the service:
+sudo systemctl daemon-reexec
+sudo systemctl restart getty@tty1
+
+..For Systems Using GDM (GNOME Desktop)
+Edit the GDM config file:
+sudo nano /etc/gdm/custom.conf
+
+Find and modify the [daemon] section:
+[daemon]
+AutomaticLoginEnable=true
+AutomaticLogin=your_username
+
+Save the file and restart GDM:
+sudo systemctl restart gdm
+
+..For LightDM (XFCE, MATE, LXQt, etc.)
+
+Edit the LightDM config file:
+sudo nano /etc/lightdm/lightdm.conf
+
+Look for these lines under [Seat:*] and modify/add if missing:
+[Seat:*]
+autologin-user=your_username
+autologin-user-timeout=0
+
+Save the file and restart LightDM:
+sudo systemctl restart lightdm
+
+..For SDDM (KDE Plasma)
+Edit the SDDM config file:
+sudo nano /etc/sddm.conf
+
+Add or modify the following lines:
+[Autologin]
+User=your_username
+Session=plasma.desktop
+
+Save the file and restart SDDM:
+sudo systemctl restart sddm
+
+
+..To check which display manager (DM) your Linux system is using, try these methods:
+1. Check the Active Display Manager Service
+
+Run this command:
+cat /etc/X11/default-display-manager
