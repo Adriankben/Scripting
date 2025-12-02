@@ -1,6 +1,9 @@
+# Ensure script can run (safe, process-only)
+Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass -Force
+
 <#
     Purpose: Install WinGet (if missing) and run "winget upgrade --all"
-    Scope: Workstations & laptops ONLY — Automatically skips servers
+    Scope: Workstations & laptops ONLY â€” Automatically skips servers
     Author: Adrian Bennett
 #>
 
@@ -8,7 +11,9 @@
 # 1. Create logging directory
 # ---------------------------
 $LogDir = "C:\ProgramData\WinGet-Upgrades"
-$LogFile = Join-Path $LogDir "upgrade-log-$(Get-Date -Format yyyy-MM-dd_HH-mm).txt"
+$Timestamp = Get-Date -Format yyyy-MM-dd_HH-mm
+$OutLog = Join-Path $LogDir "upgrade-output-$Timestamp.txt"
+$ErrLog = Join-Path $LogDir "upgrade-error-$Timestamp.txt"
 
 if (!(Test-Path $LogDir)) {
     New-Item -Path $LogDir -ItemType Directory | Out-Null
@@ -54,9 +59,9 @@ Start-Process -FilePath $WinGetPath `
     -ArgumentList "upgrade --all --accept-source-agreements --accept-package-agreements" `
     -Wait `
     -WindowStyle Hidden `
-    -RedirectStandardOutput $LogFile `
-    -RedirectStandardError $LogFile
+    -RedirectStandardOutput $OutLog `
+    -RedirectStandardError $ErrLog
 
-Write-Output "WinGet upgrade completed. Log saved to: $LogFile"
-
-exit 0
+Write-Output "WinGet upgrade completed."
+Write-Output "Output Log: $OutLog"
+Write-Output "Error Log:  $ErrLog"
