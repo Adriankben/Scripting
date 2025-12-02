@@ -5,20 +5,7 @@
 #>
 
 # ---------------------------
-# 1. Check if machine is a workstation / laptop
-# ---------------------------
-$OS = Get-CimInstance Win32_OperatingSystem
-$ProductType = $OS.ProductType  # 1 = Workstation, 2/3 = Server
-
-if ($ProductType -ne 1) {
-    Write-Output "This system is a SERVER. Skipping WinGet upgrades."
-    exit 0
-}
-
-Write-Output "Workstation detected. Continuing..."
-
-# ---------------------------
-# 2. Create logging directory
+# 1. Create logging directory
 # ---------------------------
 $LogDir = "C:\ProgramData\WinGet-Upgrades"
 $LogFile = Join-Path $LogDir "upgrade-log-$(Get-Date -Format yyyy-MM-dd_HH-mm).txt"
@@ -28,7 +15,7 @@ if (!(Test-Path $LogDir)) {
 }
 
 # ---------------------------
-# 3. Ensure WinGet is installed
+# 2. Ensure WinGet is installed
 # ---------------------------
 Write-Output "Checking for WinGet installation..."
 
@@ -59,7 +46,7 @@ if (!(Test-Path $WinGetPath)) {
 Write-Output "WinGet is installed."
 
 # ---------------------------
-# 4. Run WinGet Upgrade All
+# 3. Run WinGet Upgrade All
 # ---------------------------
 Write-Output "Running winget upgrade --all..."
 
