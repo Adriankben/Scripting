@@ -1,0 +1,11 @@
+$paths = @(
+    "C:\Path"
+)
+
+foreach ($path in $paths) {
+    if (Test-Path $path) {
+        icacls "$path" /grant Everyone:(OI)(CI)F /T /C
+    } else {
+        Write-Host "Path not found: $path"
+    }
+}
