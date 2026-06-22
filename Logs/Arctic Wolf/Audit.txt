@@ -1,0 +1,38 @@
+sw - starts with
+eq - equal
+pr - present (has value)
+
+Login / authentication activity
+actor.alternateId eq "user@domain.com" and eventType sw "user.authentication."
+
+MFA Bypass
+eventType eq "user.mfa.attempt_bypass"
+
+All MFA activity for the user
+actor.alternateId eq "user@domain.com" and eventType eq "user.authentication.auth_via_mfa"
+
+
+Okta Verify push only
+actor.alternateId eq "user@domain.com" and eventType eq "user.authentication.auth_via_mfa" and debugContext.debugData.factor eq "OKTA_VERIFY_PUSH"
+or 
+actor.alternateId eq "user@domain.com" and eventType eq "user.authentication.auth_via_mfa" and debugContext.debugData.factorType eq "push"
+
+
+Search suspicious MFA outcomes 
+actor.alternateId eq "user@domain.com" and eventType eq "user.authentication.auth_via_mfa" and (outcome.result eq "UNANSWERED" or outcome.result eq "ABANDONED" or outcome.result eq "FAILURE")
+
+Search for same source IP across users
+client.ipAddress eq "x.x.x.x"
+
+Same IP with failures only
+client.ipAddress eq "x.x.x.x" and outcome.result eq "FAILURE"
+
+Session termination / logout
+actor.alternateId eq "user@domain.com" and eventType sw "user.session."
+
+Sign-on policy decisions
+actor.alternateId eq "user@domain.com" and eventType eq "policy.evaluate_sign_on"
+
+Suspicious activity events
+eventType sw "user.account.report_suspicious_activity"
+
