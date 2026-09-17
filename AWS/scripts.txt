@@ -1,0 +1,5 @@
+Bucket Versioning
+
+aws s3api put-bucket-versioning --bucket <bucket name> --versioning-configuration Status=Enabled,MFADelete=Enabled --mfa "SerialNumber 123456" --profile <profileName>
+
+aws s3api get-bucket-versioning --bucket <your-bucket-name> --profile <profileName>

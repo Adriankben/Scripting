@@ -1,7 +1,7 @@
 <#
 .SYNOPSIS
     Search for an AD user by display name, select a user, remove them from all groups except "Domain Users",
-    disable the user account, and update the description to "Term".
+    disable the user account, clear the manager value and update the description to "Term - <today's date>".
 
 .DESCRIPTION
     The script prompts for a display name, lists matching users for selection, then processes the selected user:
@@ -92,7 +92,10 @@ try {
     
     # Disable the user account
     Disable-ADAccount -Identity $selectedUser -ErrorAction Stop
-    
+
+    # Clear the user's manager value
+    Set-ADUser -Identity $selectedUser -Clear manager
+
     # Set the user description to "Term" with the current date
     Set-ADUser -Identity $selectedUser -Description "Term - $dateToday" -ErrorAction Stop
     
