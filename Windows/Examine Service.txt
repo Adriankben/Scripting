@@ -1,0 +1,6 @@
+Examine Service
+
+Get-CimInstance -ClassName Win32_Service | Format-List
+Name,Caption,Description,PathName
+
+

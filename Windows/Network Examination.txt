@@ -1,0 +1,9 @@
+Network Examination
+
+Get-NetTCPConnection -State Listen |
+Select-Object LocalAddress,LocalPort,OwningProcess,
+@{Name="ProcessName";Expression={(Get-Process -Id $_.OwningProcess).ProcessName}}
+
+Get-NetTCPConnection -RemoteAddress <IP> |
+Select-Object CreationTime,LocalAddress,LocalPort,OwningProcess,RemoteAddress,RemotePort,State
+@{Name="ProcessName";Expression={(Get-Process -Id $_.OwningProcess).ProcessName}}

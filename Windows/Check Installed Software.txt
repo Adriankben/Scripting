@@ -1,0 +1,5 @@
+Check Installed Software
+Get-ItemProperty HKLM:\Software\Microsoft\Windows\CurrentVersion\Uninstall\*,
+HKLM:\Software\WOW6432Node\Microsoft\Windows\CurrentVersion\Uninstall\* |
+Select DisplayName, DisplayVersion, Publisher, InstallDate |
+Sort DisplayName

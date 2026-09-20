@@ -1,0 +1,4 @@
+Check UAC Registry Settings
+
+Get-ItemProperty "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\System" |
+Select EnableLUA, ConsentPromptBehaviorAdmin, PromptOnSecureDesktop

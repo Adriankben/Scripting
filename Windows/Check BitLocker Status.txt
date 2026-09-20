@@ -1,0 +1,3 @@
+Check BitLocker Status
+
+Get-BitLockerVolume

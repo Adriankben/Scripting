@@ -1,0 +1,6 @@
+Print Spooler Troubleshooting
+Get-Service Spooler
+Restart-Service Spooler -Force
+Get-WinEvent -LogName System -MaxEvents 50 |
+Where-Object {$_.ProviderName -match "Print|Spooler"} |
+Select TimeCreated, Id, ProviderName, Message

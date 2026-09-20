@@ -1,0 +1,92 @@
+Registry Interrogation
+
+List Registry Subkeys
+Get-ChildItem -Path "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion"
+
+
+Show Only Key Names
+Get-ChildItem -Path "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion" |
+Select-Object Name
+
+3. Recursively Search Registry Keys
+Get-ChildItem -Path "HKLM:\SOFTWARE" -Recurse |
+Where-Object { $_.Name -like "*Zscaler*" }
+
+4. Read Registry Values in a Key
+Get-ItemProperty -Path "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion"
+
+5. Read a Specific Registry Value
+Get-ItemProperty -Path "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion" |
+Select-Object ProgramFilesDir
+
+Get-ItemProperty -Path "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion").ProgramFilesDir
+
+6. Check Windows Update / WSUS Policy Keys
+Get-ItemProperty "HKLM:\SOFTWARE\Policies\Microsoft\Windows\WindowsUpdate\AU" |
+Select-Object NoAutoUpdate, AUOptions, UseWUServer, ScheduledInstallDay, ScheduledInstallTime
+
+7. Check UAC Settings
+Get-ItemProperty "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\System" |
+Select-Object EnableLUA, ConsentPromptBehaviorAdmin, PromptOnSecureDesktop
+
+9. Check Installed Software from Registry
+Get-ItemProperty 
+"HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\*",
+"HKLM:\SOFTWARE\WOW6432Node\Microsoft\Windows\CurrentVersion\Uninstall\*" |
+Where-Object { $_.DisplayName } |
+Select-Object DisplayName, DisplayVersion, Publisher, InstallDate |
+Sort-Object DisplayName
+
+Search for one app:
+Get-ItemProperty
+"HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\*",
+"HKLM:\SOFTWARE\WOW6432Node\Microsoft\Windows\CurrentVersion\Uninstall\*" |
+Where-Object { $_.DisplayName -like "*Sentinel*" } |
+Select-Object DisplayName, DisplayVersion, Publisher, InstallDate
+
+10. Check Startup Items
+Get-ItemProperty "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Run" 
+Get-ItemProperty "HKCU:\SOFTWARE\Microsoft\Windows\CurrentVersion\Run"
+
+
+11. Find a Registry Key by Name
+Get-ChildItem "HKLM:\SOFTWARE" -Recurse|
+Where-Object { $_.Name -like "*Ninja*" } |
+Select-Object Name
+
+12. Search Registry Values for a Word
+
+Get-ChildItem "HKLM:\SOFTWARE" -Recurse | ForEach-Object {
+    try {
+        $props = Get-ItemProperty -Path $_.PSPath -ErrorAction Stop
+        $props.PSObject.Properties | Where-Object {
+            $_.Value -like "*Zscaler*"
+        } | ForEach-Object {
+            [PSCustomObject]@{
+                RegistryPath = $_.PSParentPath
+                ValueName    = $_.Name
+                ValueData    = $_.Value
+            }
+        }
+    } catch {}
+}
+
+13. Check 32-bit vs 64-bit Registry Paths
+
+Get-ItemProperty "HKLM:\SOFTWARE\WOW6432Node\Microsoft\Windows\CurrentVersion\Uninstall\*" |
+Where-Object DisplayName |
+Select DisplayName, DisplayVersion, Publisher
+
+14. Remote Registry Interrogation
+Invoke-Command -ComputerName COMPUTERNAME -ScriptBlock {
+    Get-ItemProperty "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\System" |
+    Select-Object EnableLUA, ConsentPromptBehaviorAdmin, PromptOnSecureDesktop
+}
+
+15. Export Registry Findings
+Get-ItemProperty 
+"HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\*",
+"HKLM:\SOFTWARE\WOW6432Node\Microsoft\Windows\CurrentVersion\Uninstall\*" |
+Where-Object DisplayName |
+Select-Object DisplayName, DisplayVersion, Publisher, InstallDate |
+Export-Csv "C:\Temp\InstalledSoftware.csv" -NoTypeInformation

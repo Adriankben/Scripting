@@ -1,0 +1,5 @@
+Unlock AD Account
+
+
+Get-ADUser username -Properties LockedOut | Select SamAccountName,LockedOut
+Unlock-ADAccount -Identity username

@@ -1,0 +1,3 @@
+Check Local Admins
+
+Get-LocalGroupMember Administrators

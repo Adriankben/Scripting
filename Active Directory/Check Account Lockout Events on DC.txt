@@ -1,0 +1,10 @@
+Check Account Lockout Events on DC
+
+Event 4740 = account locked out.
+Event 4625 = failed logon.
+
+Get-WinEvent -FilterHashtable @{
+    LogName='Security'
+    Id=4740, Id=4625
+    StartTime=(Get-Date).AddHours(-24)
+} | Select TimeCreated, Id, ProviderName, Message

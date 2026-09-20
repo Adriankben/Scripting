@@ -1,0 +1,10 @@
+Examine Process
+
+Get-CimInstance -Class Win32_Process |
+Select ProcessId, Name, CommandLine |
+Sort Name
+
+Get-CimInstance -Class Win32_Process |
+Where-Object -Property ParentProcessID -EQ 667
+
+
