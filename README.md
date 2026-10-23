@@ -21,6 +21,7 @@ PowerShell scripts and command references for Active Directory, Windows, Exchang
 | `Certificates` / `Install` / `Apps` | Software and certificate deployment |
 | `Logs` | Event log collection and review |
 | `Linux` / `AWS` | Linux hardening and AWS commands |
+| `Lab-Only` | Intentionally insecure configurations for isolated test labs only |
 
 ## Usage
 
