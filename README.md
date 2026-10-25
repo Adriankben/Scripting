@@ -15,10 +15,11 @@ PowerShell scripts and command references for Active Directory, Windows, Exchang
 |---|---|
 | `Active Directory` | User lifecycle, group reporting, Kerberos and LAPS, account investigations |
 | `Exchange` | Group and membership auditing |
-| `SMB` / `SSL` / `TLS` | Protocol and cipher hardening |
+| `Hardening` | Protocol and cipher hardening: `SMB`, `SSL`, `TLS` |
+| `Vulnerability Remediation` | Vulnerability evaluation and remediation: `WinVerifyTrust`, `Teams Removal` |
 | `Windows` | Troubleshooting, investigation, updates, and system checks |
-| `WinVerifyTrust` / `Teams Removal` | Vulnerability evaluation and remediation |
-| `Certificates` / `Install` / `Apps` | Software and certificate deployment |
+| `Deployment` | Software and certificate deployment: `Install`, `Certificates` |
+| `Apps` | Per-application validation, configuration, and removal (Cisco, Java, Nvidia, Sysmon, NinjaOne, Quick Assist) |
 | `Logs` | Event log collection and review |
 | `Linux` / `AWS` | Linux hardening and AWS commands |
 | `Lab-Only` | Intentionally insecure configurations for isolated test labs only |
