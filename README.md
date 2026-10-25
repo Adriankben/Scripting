@@ -26,6 +26,8 @@ PowerShell scripts and command references for Active Directory, Windows, Exchang
 
 ## Usage
 
+`.ps1` and `.sh` files are complete scripts. `.txt` files are command references (quick one-liners grouped under a heading) meant to be copied and run individually.
+
 Review each script before running it and test in a non-production environment first. Most scripts need an elevated PowerShell session and the relevant modules, such as `ActiveDirectory`.
 
 ## License
