@@ -293,7 +293,6 @@ try {
         throw 'Appx cmdlets are missing (Server Core without Desktop Experience?). winget is not practical here.'
     }
     if ($id.IsSystem) { Write-Warn2 'Running as SYSTEM: per-user registration will be skipped, machine-wide provisioning still happens.' }
-    if ($Mode -eq 'Online' -and $Version -eq 'latest') { Write-Warn2 'Installing "latest". Pin -Version (or use -SourcePath) so every server gets the same build.' }
     if ($Mode -eq 'Offline' -and -not $ManifestHash) { Write-Warn2 'No -ManifestHash given: files are checked against hashes.json, but hashes.json itself is not verified.' }
 
     # ---------------------------------------------------------------- 2. record state for rollback
