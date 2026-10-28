@@ -184,11 +184,12 @@ function Grant-WinGetFolderAccess($dir, $backupFile) {
     $parent = Split-Path $dir -Parent
     $ErrorActionPreference = 'Continue'   # native tools write to stderr; judge them by exit code instead
 
-    # icacls with a SID is language-independent; takeown's /d Y only works on English Windows
-    $out = & icacls.exe $dir /setowner '*S-1-5-32-544' /t /c /q 2>&1
+    # takeown is the method proven on Server 2019. Its /d Y answer only works on English Windows,
+    # so fall back to icacls with the Administrators SID when it fails.
+    $out = & takeown.exe /f $dir /r /a /d Y 2>&1
     if ($LASTEXITCODE -ne 0) {
-        Write-Warn2 "icacls /setowner failed ($out); falling back to takeown"
-        $out = & takeown.exe /f $dir /r /a /d Y 2>&1
+        Write-Warn2 "takeown failed ($out); falling back to icacls /setowner"
+        $out = & icacls.exe $dir /setowner '*S-1-5-32-544' /t /c /q 2>&1
         if ($LASTEXITCODE -ne 0) { throw "Could not take ownership of $dir (exit $LASTEXITCODE): $out" }
     }
     $out = & icacls.exe $dir /save $backupFile /t /c /q 2>&1
@@ -197,8 +198,8 @@ function Grant-WinGetFolderAccess($dir, $backupFile) {
     if ($LASTEXITCODE -ne 0) { throw "icacls grant failed on $dir (exit $LASTEXITCODE): $out" }
     $out = & icacls.exe $dir /setowner 'NT SERVICE\TrustedInstaller' /t /c /q 2>&1
     if ($LASTEXITCODE -ne 0) { Write-Warn2 "Could not hand ownership back to TrustedInstaller: $out" }
-    Write-Host "  Folder ACL after the change:"
-    & icacls.exe $dir 2>&1 | ForEach-Object { Write-Host "    $_" }
+    Write-Host "  ACL on winget.exe after the change:"
+    & icacls.exe (Join-Path $dir 'winget.exe') 2>&1 | ForEach-Object { Write-Host "    $_" }
     return $parent
 }
 
