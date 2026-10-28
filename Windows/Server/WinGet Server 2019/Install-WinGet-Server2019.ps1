@@ -162,8 +162,18 @@ function Find-WinGetExe {
 }
 
 function Test-WinGetRuns($exe) {
-    if (-not $exe -or -not (Test-Path $exe)) { return $false }
-    try { $null = & $exe --version 2>&1; return ($LASTEXITCODE -eq 0) } catch { return $false }
+    # Logs why a launch failed so the transcript shows the real error, not just "cannot run"
+    if (-not $exe) { return $false }
+    if (-not (Test-Path $exe)) { Write-Host "  not found: $exe"; return $false }
+    try {
+        $out = & $exe --version 2>&1 | Out-String
+        if ($LASTEXITCODE -eq 0) { return $true }
+        Write-Host ("  {0} --version exited 0x{1:X8}: {2}" -f $exe, $LASTEXITCODE, $out.Trim())
+        return $false
+    } catch {
+        Write-Host "  $exe failed to start: $($_.Exception.Message)"
+        return $false
+    }
 }
 
 function Grant-WinGetFolderAccess($dir, $backupFile) {
@@ -187,6 +197,8 @@ function Grant-WinGetFolderAccess($dir, $backupFile) {
     if ($LASTEXITCODE -ne 0) { throw "icacls grant failed on $dir (exit $LASTEXITCODE): $out" }
     $out = & icacls.exe $dir /setowner 'NT SERVICE\TrustedInstaller' /t /c /q 2>&1
     if ($LASTEXITCODE -ne 0) { Write-Warn2 "Could not hand ownership back to TrustedInstaller: $out" }
+    Write-Host "  Folder ACL after the change:"
+    & icacls.exe $dir 2>&1 | ForEach-Object { Write-Host "    $_" }
     return $parent
 }
 
