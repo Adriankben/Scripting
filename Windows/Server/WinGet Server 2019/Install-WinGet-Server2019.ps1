@@ -95,6 +95,52 @@ $VCUrl      = 'https://aka.ms/vs/17/release/vc_redist.x64.exe'
 function Write-Step($msg) { Write-Host "`n=== $msg ===" -ForegroundColor Cyan }
 function Write-Ok($msg)   { Write-Host "[OK]   $msg" -ForegroundColor Green }
 function Write-Warn2($msg){ Write-Host "[WARN] $msg" -ForegroundColor Yellow }
+
+function Enable-Privilege($name) {
+    # Setting the owner to another account (TrustedInstaller) needs SeRestorePrivilege enabled.
+    # Administrators hold it but it starts disabled, and icacls doesn't enable it itself.
+    # Child processes such as icacls.exe inherit the enabled privilege.
+    if (-not ('WinGetTokenPriv' -as [type])) {
+        Add-Type -TypeDefinition @'
+using System;
+using System.Runtime.InteropServices;
+public static class WinGetTokenPriv {
+    [StructLayout(LayoutKind.Sequential, Pack = 1)]
+    struct TokPriv { public int Count; public long Luid; public int Attr; }
+    [DllImport("advapi32.dll", SetLastError = true)]
+    static extern bool OpenProcessToken(IntPtr h, uint access, out IntPtr token);
+    [DllImport("advapi32.dll", SetLastError = true, CharSet = CharSet.Unicode)]
+    static extern bool LookupPrivilegeValue(string system, string name, out long luid);
+    [DllImport("advapi32.dll", SetLastError = true)]
+    static extern bool AdjustTokenPrivileges(IntPtr token, bool disableAll, ref TokPriv state, int len, IntPtr prev, IntPtr retLen);
+    [DllImport("kernel32.dll")] static extern IntPtr GetCurrentProcess();
+    [DllImport("kernel32.dll")] static extern bool CloseHandle(IntPtr h);
+    public static bool Enable(string name) {
+        IntPtr token;
+        if (!OpenProcessToken(GetCurrentProcess(), 0x28, out token)) return false;   // ADJUST_PRIVILEGES | QUERY
+        try {
+            TokPriv tp; tp.Count = 1; tp.Attr = 2;                                    // SE_PRIVILEGE_ENABLED
+            if (!LookupPrivilegeValue(null, name, out tp.Luid)) return false;
+            if (!AdjustTokenPrivileges(token, false, ref tp, 0, IntPtr.Zero, IntPtr.Zero)) return false;
+            return Marshal.GetLastWin32Error() == 0;                                  // 1300 = not held
+        } finally { CloseHandle(token); }
+    }
+}
+'@
+    }
+    return [WinGetTokenPriv]::Enable($name)
+}
+
+function Set-OwnerTrustedInstaller($dir) {
+    if (-not (Enable-Privilege 'SeRestorePrivilege')) { Write-Warn2 'Could not enable SeRestorePrivilege' }
+    $out = & icacls.exe $dir /setowner 'NT SERVICE\TrustedInstaller' /t /c /q 2>&1
+    $owner = try { (Get-Acl $dir).Owner } catch { '<unreadable>' }
+    if ($LASTEXITCODE -ne 0 -or $owner -notmatch 'TrustedInstaller') {
+        Write-Warn2 "Owner of $dir is still $owner (icacls exit $LASTEXITCODE): $out"
+        return $false
+    }
+    return $true
+}
 function Write-Fail($msg) { Write-Host "[FAIL] $msg" -ForegroundColor Red }
 
 # ---------------------------------------------------------------- web / proxy
@@ -162,8 +208,18 @@ function Find-WinGetExe {
 }
 
 function Test-WinGetRuns($exe) {
-    if (-not $exe -or -not (Test-Path $exe)) { return $false }
-    try { $null = & $exe --version 2>&1; return ($LASTEXITCODE -eq 0) } catch { return $false }
+    # Logs why a launch failed so the transcript shows the real error, not just "cannot run"
+    if (-not $exe) { return $false }
+    if (-not (Test-Path $exe)) { Write-Host "  not found: $exe"; return $false }
+    try {
+        $out = & $exe --version 2>&1 | Out-String
+        if ($LASTEXITCODE -eq 0) { return $true }
+        Write-Host ("  {0} --version exited 0x{1:X8}: {2}" -f $exe, $LASTEXITCODE, $out.Trim())
+        return $false
+    } catch {
+        Write-Host "  $exe failed to start: $($_.Exception.Message)"
+        return $false
+    }
 }
 
 function Grant-WinGetFolderAccess($dir, $backupFile) {
@@ -174,19 +230,21 @@ function Grant-WinGetFolderAccess($dir, $backupFile) {
     $parent = Split-Path $dir -Parent
     $ErrorActionPreference = 'Continue'   # native tools write to stderr; judge them by exit code instead
 
-    # icacls with a SID is language-independent; takeown's /d Y only works on English Windows
-    $out = & icacls.exe $dir /setowner '*S-1-5-32-544' /t /c /q 2>&1
+    # takeown is the method proven on Server 2019. Its /d Y answer only works on English Windows,
+    # so fall back to icacls with the Administrators SID when it fails.
+    $out = & takeown.exe /f $dir /r /a /d Y 2>&1
     if ($LASTEXITCODE -ne 0) {
-        Write-Warn2 "icacls /setowner failed ($out); falling back to takeown"
-        $out = & takeown.exe /f $dir /r /a /d Y 2>&1
+        Write-Warn2 "takeown failed ($out); falling back to icacls /setowner"
+        $out = & icacls.exe $dir /setowner '*S-1-5-32-544' /t /c /q 2>&1
         if ($LASTEXITCODE -ne 0) { throw "Could not take ownership of $dir (exit $LASTEXITCODE): $out" }
     }
     $out = & icacls.exe $dir /save $backupFile /t /c /q 2>&1
     if ($LASTEXITCODE -ne 0) { throw "icacls save failed on $dir (exit $LASTEXITCODE): $out" }
     $out = & icacls.exe $dir /grant '*S-1-5-32-544:(OI)(CI)(RX)' /t /c /q 2>&1
     if ($LASTEXITCODE -ne 0) { throw "icacls grant failed on $dir (exit $LASTEXITCODE): $out" }
-    $out = & icacls.exe $dir /setowner 'NT SERVICE\TrustedInstaller' /t /c /q 2>&1
-    if ($LASTEXITCODE -ne 0) { Write-Warn2 "Could not hand ownership back to TrustedInstaller: $out" }
+    if (Set-OwnerTrustedInstaller $dir) { Write-Ok 'Ownership handed back to TrustedInstaller' }
+    Write-Host "  ACL on winget.exe after the change:"
+    & icacls.exe (Join-Path $dir 'winget.exe') 2>&1 | ForEach-Object { Write-Host "    $_" }
     return $parent
 }
 
@@ -281,7 +339,6 @@ try {
         throw 'Appx cmdlets are missing (Server Core without Desktop Experience?). winget is not practical here.'
     }
     if ($id.IsSystem) { Write-Warn2 'Running as SYSTEM: per-user registration will be skipped, machine-wide provisioning still happens.' }
-    if ($Mode -eq 'Online' -and $Version -eq 'latest') { Write-Warn2 'Installing "latest". Pin -Version (or use -SourcePath) so every server gets the same build.' }
     if ($Mode -eq 'Offline' -and -not $ManifestHash) { Write-Warn2 'No -ManifestHash given: files are checked against hashes.json, but hashes.json itself is not verified.' }
 
     # ---------------------------------------------------------------- 2. record state for rollback
@@ -411,6 +468,12 @@ try {
                 throw 'winget.exe still cannot run after the permission fix. Check the log, then run the rollback script.'
             }
         }
+    }
+    # A run before the ownership fix (or a manual fix) can leave Administrators as owner; repair that on re-run
+    $owner = try { (Get-Acl $wingetDir).Owner } catch { $null }
+    if ($owner -and $owner -notmatch 'TrustedInstaller') {
+        Write-Warn2 "winget folder is owned by $owner; handing it back to TrustedInstaller"
+        if (Set-OwnerTrustedInstaller $wingetDir) { Write-Ok 'Ownership handed back to TrustedInstaller' }
     }
     $parts = $machinePath -split ';' | Where-Object { $_ -and $_ -notlike '*Microsoft.DesktopAppInstaller_*' }
     $newPath = ($parts + $wingetDir) -join ';'

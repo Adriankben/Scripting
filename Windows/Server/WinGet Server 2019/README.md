@@ -39,7 +39,7 @@ Exit codes: `0` installed and all tests passed, `1` install failed, `2` installe
 
 Server 2019 blocks running `winget.exe` by its full path, even for administrators. SYSTEM, RMM agents and scheduled tasks need to do exactly that. When the script detects the block, it:
 
-1. Takes ownership of the winget package folder only (`C:\Program Files\WindowsApps\Microsoft.DesktopAppInstaller_<version>_x64__8wekyb3d8bbwe`), using the Administrators SID so it works on any language.
+1. Takes ownership of the winget package folder only (`C:\Program Files\WindowsApps\Microsoft.DesktopAppInstaller_<version>_x64__8wekyb3d8bbwe`) with `takeown`, falling back to `icacls` with the Administrators SID on non-English Windows.
 2. Saves the original permissions with `icacls /save`.
 3. Grants `BUILTIN\Administrators` Read & Execute. No write access is granted.
 4. Sets the owner back to `NT SERVICE\TrustedInstaller`.
