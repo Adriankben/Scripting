@@ -80,8 +80,9 @@ try {
             -Type DWord `
             -ErrorAction Stop
 
-        # Verify
-        $current = (Get-ItemProperty -LiteralPath $fipsKey -Name Enabled -ErrorAction Stop).Enabled
+        # Confirm (expected: 0)
+        $current = (Get-ItemProperty "HKLM:\SYSTEM\CurrentControlSet\Control\Lsa\FipsAlgorithmPolicy" -ErrorAction Stop).Enabled
+        Write-Host "FipsAlgorithmPolicy Enabled = $current"
 
         if ($current -eq 0) {
             Write-Host "SUCCESS: Windows FIPS algorithm policy disabled." -ForegroundColor Green
