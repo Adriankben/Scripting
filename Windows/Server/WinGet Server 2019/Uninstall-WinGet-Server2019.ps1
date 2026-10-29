@@ -40,6 +40,52 @@ function Write-Step($msg) { Write-Host "`n=== $msg ===" -ForegroundColor Cyan }
 function Write-Ok($msg)   { Write-Host "[OK]   $msg" -ForegroundColor Green }
 function Write-Warn2($msg){ Write-Host "[WARN] $msg" -ForegroundColor Yellow }
 
+function Enable-Privilege($name) {
+    # Setting the owner to another account (TrustedInstaller) needs SeRestorePrivilege enabled.
+    # Administrators hold it but it starts disabled, and icacls doesn't enable it itself.
+    # Child processes such as icacls.exe inherit the enabled privilege.
+    if (-not ('WinGetTokenPriv' -as [type])) {
+        Add-Type -TypeDefinition @'
+using System;
+using System.Runtime.InteropServices;
+public static class WinGetTokenPriv {
+    [StructLayout(LayoutKind.Sequential, Pack = 1)]
+    struct TokPriv { public int Count; public long Luid; public int Attr; }
+    [DllImport("advapi32.dll", SetLastError = true)]
+    static extern bool OpenProcessToken(IntPtr h, uint access, out IntPtr token);
+    [DllImport("advapi32.dll", SetLastError = true, CharSet = CharSet.Unicode)]
+    static extern bool LookupPrivilegeValue(string system, string name, out long luid);
+    [DllImport("advapi32.dll", SetLastError = true)]
+    static extern bool AdjustTokenPrivileges(IntPtr token, bool disableAll, ref TokPriv state, int len, IntPtr prev, IntPtr retLen);
+    [DllImport("kernel32.dll")] static extern IntPtr GetCurrentProcess();
+    [DllImport("kernel32.dll")] static extern bool CloseHandle(IntPtr h);
+    public static bool Enable(string name) {
+        IntPtr token;
+        if (!OpenProcessToken(GetCurrentProcess(), 0x28, out token)) return false;   // ADJUST_PRIVILEGES | QUERY
+        try {
+            TokPriv tp; tp.Count = 1; tp.Attr = 2;                                    // SE_PRIVILEGE_ENABLED
+            if (!LookupPrivilegeValue(null, name, out tp.Luid)) return false;
+            if (!AdjustTokenPrivileges(token, false, ref tp, 0, IntPtr.Zero, IntPtr.Zero)) return false;
+            return Marshal.GetLastWin32Error() == 0;                                  // 1300 = not held
+        } finally { CloseHandle(token); }
+    }
+}
+'@
+    }
+    return [WinGetTokenPriv]::Enable($name)
+}
+
+function Set-OwnerTrustedInstaller($dir) {
+    if (-not (Enable-Privilege 'SeRestorePrivilege')) { Write-Warn2 'Could not enable SeRestorePrivilege' }
+    $out = & icacls.exe $dir /setowner 'NT SERVICE\TrustedInstaller' /t /c /q 2>&1
+    $owner = try { (Get-Acl $dir).Owner } catch { '<unreadable>' }
+    if ($LASTEXITCODE -ne 0 -or $owner -notmatch 'TrustedInstaller') {
+        Write-Warn2 "Owner of $dir is still $owner (icacls exit $LASTEXITCODE): $out"
+        return $false
+    }
+    return $true
+}
+
 $id = [Security.Principal.WindowsIdentity]::GetCurrent()
 if (-not ([Security.Principal.WindowsPrincipal]$id).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)) {
     Write-Host 'Run this script from an elevated (Administrator) PowerShell.' -ForegroundColor Red
@@ -65,13 +111,13 @@ Get-Process winget, WindowsPackageManagerServer -ErrorAction SilentlyContinue | 
 if ($state -and $state.AclBackupFile -and (Test-Path $state.AclBackupFile) -and (Test-Path $state.AclBackupParent)) {
     Write-Step 'Restoring original WindowsApps folder permissions'
     if ($PSCmdlet.ShouldProcess($state.AclBackupParent, 'icacls /restore')) {
-        # The folder belongs to TrustedInstaller again, so take ownership to rewrite the ACL, then give it back
+        # Take ownership to rewrite the ACL, then give it back to TrustedInstaller
         $first = (Get-Content $state.AclBackupFile -Encoding Unicode -TotalCount 1).Trim()
         $dir = Join-Path $state.AclBackupParent $first
         $null = & takeown.exe /f $dir /r /a /d Y 2>&1
         $out = & icacls.exe $state.AclBackupParent /restore $state.AclBackupFile /c /q 2>&1
         if ($LASTEXITCODE -eq 0) { Write-Ok 'Permissions restored' } else { Write-Warn2 "icacls restore exit code ${LASTEXITCODE}: $out"; $errors++ }
-        $null = & icacls.exe $dir /setowner 'NT SERVICE\TrustedInstaller' /t /c /q 2>&1
+        if (-not (Set-OwnerTrustedInstaller $dir)) { $errors++ }
     }
 }
 

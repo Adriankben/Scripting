@@ -95,6 +95,52 @@ $VCUrl      = 'https://aka.ms/vs/17/release/vc_redist.x64.exe'
 function Write-Step($msg) { Write-Host "`n=== $msg ===" -ForegroundColor Cyan }
 function Write-Ok($msg)   { Write-Host "[OK]   $msg" -ForegroundColor Green }
 function Write-Warn2($msg){ Write-Host "[WARN] $msg" -ForegroundColor Yellow }
+
+function Enable-Privilege($name) {
+    # Setting the owner to another account (TrustedInstaller) needs SeRestorePrivilege enabled.
+    # Administrators hold it but it starts disabled, and icacls doesn't enable it itself.
+    # Child processes such as icacls.exe inherit the enabled privilege.
+    if (-not ('WinGetTokenPriv' -as [type])) {
+        Add-Type -TypeDefinition @'
+using System;
+using System.Runtime.InteropServices;
+public static class WinGetTokenPriv {
+    [StructLayout(LayoutKind.Sequential, Pack = 1)]
+    struct TokPriv { public int Count; public long Luid; public int Attr; }
+    [DllImport("advapi32.dll", SetLastError = true)]
+    static extern bool OpenProcessToken(IntPtr h, uint access, out IntPtr token);
+    [DllImport("advapi32.dll", SetLastError = true, CharSet = CharSet.Unicode)]
+    static extern bool LookupPrivilegeValue(string system, string name, out long luid);
+    [DllImport("advapi32.dll", SetLastError = true)]
+    static extern bool AdjustTokenPrivileges(IntPtr token, bool disableAll, ref TokPriv state, int len, IntPtr prev, IntPtr retLen);
+    [DllImport("kernel32.dll")] static extern IntPtr GetCurrentProcess();
+    [DllImport("kernel32.dll")] static extern bool CloseHandle(IntPtr h);
+    public static bool Enable(string name) {
+        IntPtr token;
+        if (!OpenProcessToken(GetCurrentProcess(), 0x28, out token)) return false;   // ADJUST_PRIVILEGES | QUERY
+        try {
+            TokPriv tp; tp.Count = 1; tp.Attr = 2;                                    // SE_PRIVILEGE_ENABLED
+            if (!LookupPrivilegeValue(null, name, out tp.Luid)) return false;
+            if (!AdjustTokenPrivileges(token, false, ref tp, 0, IntPtr.Zero, IntPtr.Zero)) return false;
+            return Marshal.GetLastWin32Error() == 0;                                  // 1300 = not held
+        } finally { CloseHandle(token); }
+    }
+}
+'@
+    }
+    return [WinGetTokenPriv]::Enable($name)
+}
+
+function Set-OwnerTrustedInstaller($dir) {
+    if (-not (Enable-Privilege 'SeRestorePrivilege')) { Write-Warn2 'Could not enable SeRestorePrivilege' }
+    $out = & icacls.exe $dir /setowner 'NT SERVICE\TrustedInstaller' /t /c /q 2>&1
+    $owner = try { (Get-Acl $dir).Owner } catch { '<unreadable>' }
+    if ($LASTEXITCODE -ne 0 -or $owner -notmatch 'TrustedInstaller') {
+        Write-Warn2 "Owner of $dir is still $owner (icacls exit $LASTEXITCODE): $out"
+        return $false
+    }
+    return $true
+}
 function Write-Fail($msg) { Write-Host "[FAIL] $msg" -ForegroundColor Red }
 
 # ---------------------------------------------------------------- web / proxy
@@ -196,8 +242,7 @@ function Grant-WinGetFolderAccess($dir, $backupFile) {
     if ($LASTEXITCODE -ne 0) { throw "icacls save failed on $dir (exit $LASTEXITCODE): $out" }
     $out = & icacls.exe $dir /grant '*S-1-5-32-544:(OI)(CI)(RX)' /t /c /q 2>&1
     if ($LASTEXITCODE -ne 0) { throw "icacls grant failed on $dir (exit $LASTEXITCODE): $out" }
-    $out = & icacls.exe $dir /setowner 'NT SERVICE\TrustedInstaller' /t /c /q 2>&1
-    if ($LASTEXITCODE -ne 0) { Write-Warn2 "Could not hand ownership back to TrustedInstaller: $out" }
+    if (Set-OwnerTrustedInstaller $dir) { Write-Ok 'Ownership handed back to TrustedInstaller' }
     Write-Host "  ACL on winget.exe after the change:"
     & icacls.exe (Join-Path $dir 'winget.exe') 2>&1 | ForEach-Object { Write-Host "    $_" }
     return $parent
