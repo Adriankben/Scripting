@@ -469,6 +469,12 @@ try {
             }
         }
     }
+    # A run before the ownership fix (or a manual fix) can leave Administrators as owner; repair that on re-run
+    $owner = try { (Get-Acl $wingetDir).Owner } catch { $null }
+    if ($owner -and $owner -notmatch 'TrustedInstaller') {
+        Write-Warn2 "winget folder is owned by $owner; handing it back to TrustedInstaller"
+        if (Set-OwnerTrustedInstaller $wingetDir) { Write-Ok 'Ownership handed back to TrustedInstaller' }
+    }
     $parts = $machinePath -split ';' | Where-Object { $_ -and $_ -notlike '*Microsoft.DesktopAppInstaller_*' }
     $newPath = ($parts + $wingetDir) -join ';'
     [Environment]::SetEnvironmentVariable('Path', $newPath, 'Machine')
