@@ -25,7 +25,7 @@ foreach ($path in $paths) {
                 continue
             }
 
-            if ($node.InnerText -eq "false") {
+            if ($node.InnerText -ceq "false") {
                 Write-Host "FIPS already disabled: $path"
                 continue
             }
