@@ -60,3 +60,38 @@ foreach ($path in $paths) {
 if (-not $found) {
     Write-Warning "Cisco AnyConnect local policy file not found."
 }
+
+# Disable Windows FIPS algorithm policy
+# ("System cryptography: Use FIPS compliant algorithms...")
+# A RESTART IS REQUIRED for this change to take effect.
+# Note: if this policy is enforced by Group Policy, the GPO will
+# re-apply it at the next refresh and override this setting.
+$fipsKey = "HKLM:\SYSTEM\CurrentControlSet\Control\Lsa\FipsAlgorithmPolicy"
+
+try {
+    if (-not (Test-Path -LiteralPath $fipsKey)) {
+        Write-Warning "Windows FIPS policy key not found: $fipsKey"
+    }
+    else {
+        Set-ItemProperty `
+            -LiteralPath $fipsKey `
+            -Name Enabled `
+            -Value 0 `
+            -Type DWord `
+            -ErrorAction Stop
+
+        # Verify
+        $current = (Get-ItemProperty -LiteralPath $fipsKey -Name Enabled -ErrorAction Stop).Enabled
+
+        if ($current -eq 0) {
+            Write-Host "SUCCESS: Windows FIPS algorithm policy disabled." -ForegroundColor Green
+            Write-Host "RESTART REQUIRED to apply change." -ForegroundColor Yellow
+        }
+        else {
+            Write-Warning "Verification failed: Windows FIPS policy Enabled = $current"
+        }
+    }
+}
+catch {
+    Write-Error "Failed to disable Windows FIPS policy: $_"
+}
