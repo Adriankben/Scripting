@@ -1,3 +1,4 @@
+#Requires -RunAsAdministrator
 # Disable Cisco AnyConnect / Secure Client FIPS
 # Run as Administrator
 
