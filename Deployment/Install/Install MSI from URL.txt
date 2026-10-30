@@ -12,6 +12,14 @@ $u='<MSI_URL>'; $f='C:\install.msi'; try { [Net.ServicePointManager]::SecurityPr
 Let msiexec download and install directly (fallback if Invoke-WebRequest is blocked)
 (Start-Process msiexec.exe '/i "<MSI_URL>" /qn /norestart /l*v C:\Windows\Temp\install.log' -Wait -PassThru).ExitCode
 
+NinjaOne direct installer link: download to C: drive and install (link from Devices > Agent Installers > Installer details)
+$u='https://us2.ninjarmm.com/agent/installer/<INSTALLER_ID>/<VERSION>/NinjaOne-Agent-<ORG>-<LOCATION>-Auto-x86-64.msi'; $f='C:\NinjaOneAgent.msi'; try { [Net.ServicePointManager]::SecurityProtocol=[Net.ServicePointManager]::SecurityProtocol -bor 'Tls12'; Invoke-WebRequest $u -OutFile $f -UseBasicParsing -UserAgent ([Microsoft.PowerShell.Commands.PSUserAgent]::Chrome) -ErrorAction Stop; (Start-Process msiexec.exe "/i `"$f`" /qn /norestart /l*v `"C:\NinjaOneAgent.log`"" -Wait -PassThru).ExitCode } catch { "Failed: $($_.Exception.Message)" }
+
+NinjaOne direct installer link: download to C: drive only (no install)
+Invoke-WebRequest 'https://us2.ninjarmm.com/agent/installer/<INSTALLER_ID>/<VERSION>/NinjaOne-Agent-<ORG>-<LOCATION>-Auto-x86-64.msi' -OutFile 'C:\NinjaOneAgent.msi' -UseBasicParsing -UserAgent ([Microsoft.PowerShell.Commands.PSUserAgent]::Chrome)
+
+Delete C:\NinjaOneAgent.msi after the agent enrolls; the direct link embeds the location's enrollment ID.
+
 NinjaOne generic installer with location token (token from Devices > Agent Installers > Installer details)
 $f="$env:TEMP\NinjaOneAgent.msi"; try { Invoke-WebRequest 'https://us2.ninjarmm.com/ws/api/v2/generic-installer/NinjaOneAgent-x86.msi' -OutFile $f -UseBasicParsing -UserAgent ([Microsoft.PowerShell.Commands.PSUserAgent]::Chrome) -ErrorAction Stop; (Start-Process msiexec.exe "/i `"$f`" /qn /norestart TOKENID=`"<TOKEN>`" /l*v `"$env:TEMP\ninja.log`"" -Wait -PassThru).ExitCode } catch { "Failed: $($_.Exception.Message)" } finally { Remove-Item $f -ErrorAction SilentlyContinue }
 
