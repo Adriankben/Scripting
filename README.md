@@ -7,7 +7,7 @@ PowerShell scripts and command references for Active Directory, Windows, Exchang
 - **Identity lifecycle and AD security:** user termination automation, krbtgt key rotation, LAPS admin setup, blank password attribute remediation, account lockout and "who disabled this user" investigations
 - **Protocol hardening:** disable SMBv1 and enable SMBv2/v3, disable legacy SSL and weak ciphers, configure TLS client and server settings, disable Print Spooler
 - **Reporting and audits:** AD and Exchange group membership reports, local admin checks, BitLocker and UAC status, installed software inventory
-- **Deployment and remediation:** Automox MSI install with validation, Zscaler certificate install, Windows Update with error handling, winget install and rollback for Server 2019, Teams vulnerability remediation, WinVerifyTrust evaluation and remediation
+- **Deployment and remediation:** Automox MSI install with validation, MSI install-from-URL one-liners (including NinjaOne), Zscaler certificate install, Windows Update with error handling, winget install and rollback for Server 2019, Teams vulnerability remediation, WinVerifyTrust evaluation and remediation
 
 ## Layout
 

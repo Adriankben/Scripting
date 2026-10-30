@@ -1,0 +1,36 @@
+Install MSI from URL
+
+Run in an elevated PowerShell session. Replace <MSI_URL> with the HTTPS download link.
+Do not commit real installer links here: RMM installer URLs (NinjaOne, etc.) carry an enrollment token.
+
+Download, verify signature, install silently, then delete the installer
+$u='<MSI_URL>'; $f="$env:TEMP\install.msi"; try { [Net.ServicePointManager]::SecurityProtocol=[Net.ServicePointManager]::SecurityProtocol -bor 'Tls12'; Invoke-WebRequest $u -OutFile $f -UseBasicParsing -UserAgent ([Microsoft.PowerShell.Commands.PSUserAgent]::Chrome) -ErrorAction Stop; $s=Get-AuthenticodeSignature $f; if ($s.Status -ne 'Valid') { throw "Signature status: $($s.Status)" }; "Signed by: $($s.SignerCertificate.Subject)"; (Start-Process msiexec.exe "/i `"$f`" /qn /norestart /l*v `"$env:TEMP\install.log`"" -Wait -PassThru).ExitCode } catch { "Failed: $($_.Exception.Message)" } finally { Remove-Item $f -ErrorAction SilentlyContinue }
+
+Same, but keep the installer and log on the C: drive
+$u='<MSI_URL>'; $f='C:\install.msi'; try { [Net.ServicePointManager]::SecurityProtocol=[Net.ServicePointManager]::SecurityProtocol -bor 'Tls12'; Invoke-WebRequest $u -OutFile $f -UseBasicParsing -UserAgent ([Microsoft.PowerShell.Commands.PSUserAgent]::Chrome) -ErrorAction Stop; $s=Get-AuthenticodeSignature $f; if ($s.Status -ne 'Valid') { throw "Signature status: $($s.Status)" }; (Start-Process msiexec.exe "/i `"$f`" /qn /norestart /l*v `"C:\install.log`"" -Wait -PassThru).ExitCode } catch { "Failed: $($_.Exception.Message)" }
+
+Let msiexec download and install directly (fallback if Invoke-WebRequest is blocked)
+(Start-Process msiexec.exe '/i "<MSI_URL>" /qn /norestart /l*v C:\Windows\Temp\install.log' -Wait -PassThru).ExitCode
+
+NinjaOne generic installer with location token (token from Devices > Agent Installers > Installer details)
+$f="$env:TEMP\NinjaOneAgent.msi"; try { Invoke-WebRequest 'https://us2.ninjarmm.com/ws/api/v2/generic-installer/NinjaOneAgent-x86.msi' -OutFile $f -UseBasicParsing -UserAgent ([Microsoft.PowerShell.Commands.PSUserAgent]::Chrome) -ErrorAction Stop; (Start-Process msiexec.exe "/i `"$f`" /qn /norestart TOKENID=`"<TOKEN>`" /l*v `"$env:TEMP\ninja.log`"" -Wait -PassThru).ExitCode } catch { "Failed: $($_.Exception.Message)" } finally { Remove-Item $f -ErrorAction SilentlyContinue }
+
+Exit codes
+0     Success
+3010  Success, reboot required
+1641  Success, installer started a reboot
+1603  Fatal error during install (check log for "Return value 3")
+1618  Another install is in progress
+1619  Package could not be opened (download failed or bad path)
+1625  Blocked by policy
+
+Troubleshooting a 403 Forbidden on download
+- Keep -UserAgent Chrome; many CDNs block the default PowerShell agent
+- Links with tokens or versions in the path expire; generate a fresh one
+- When run as SYSTEM, a proxy or web filter may block the request; test the URL in a browser on the same machine
+
+Read the install log (cmd)
+type C:\install.log | findstr /i /c:"Return value 3" /c:"error status" /c:"MainEngineThread is returning"
+
+Read the install log (PowerShell, with context around the failure)
+Select-String -Path 'C:\install.log' -Pattern 'Return value 3' -Context 20,2
